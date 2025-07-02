@@ -1,4 +1,5 @@
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 const REGION = "us-east-2";
 const BUCKET_NAME = "reliefdrop-donations-harshini";
@@ -24,23 +25,38 @@ export async function uploadDonationFile({
   console.log("File uploaded to S3:", key);
   return key;
 }
+
+export async function getDownloadUrl(s3Key) {
+  const cmd = new GetObjectCommand({
+    Bucket: BUCKET_NAME,
+    Key: s3Key,
+  });
+
+  const url = await getSignedUrl(s3, cmd, {
+    expiresIn: 60 * 60 * 24, // 24 hours
+  });
+
+  return url;
+}
+
 if (process.argv[2] === "test") {
-    (async () => {
-      const dropzoneId = "dz-test";
-      const donationId = "don-test";
-      const fileName = "hello.txt";
-      const fileContent = Buffer.from("hi from me!");
-  
-      const key = await uploadDonationFile({
-        dropzoneId,
-        donationId,
-        fileName,
-        fileContent,
-      });
-  
-      console.log("test upload completed. s3 Key:", key);
-    })();
-  }
-//this function takes the dropzone ID, donation ID, filename, and file content
-//and then subsequently uploads the file to: reliefdrop/<dropzoneId>/<donationId>/<filename>
-//and then returns the s3 key path for storage in DynamoDB
+  (async () => {
+    const dropzoneId = "dz-test";
+    const donationId = "don-test";
+    const fileName = "hello.txt";
+    const fileContent = Buffer.from("hi from me!");
+
+    const key = await uploadDonationFile({
+      dropzoneId,
+      donationId,
+      fileName,
+      fileContent,
+    });
+
+    console.log("test upload completed. s3 Key:", key);
+
+    // TEST the download URL!
+    const url = await getDownloadUrl(key);
+    console.log("Download URL:", url);
+  })();
+}
