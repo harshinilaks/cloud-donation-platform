@@ -2,15 +2,37 @@ import { createDonation } from "./createDonation.js";
 import { createDropZone, getAllDropZones } from "./createDropZone.js";
 
 export const handler = async (event) => {
-  console.log("Incoming event:", event);
+  console.log("Incoming event:", JSON.stringify(event, null, 2));
 
   try {
-    // routing based on HTTP path -> handles POST /donations, POST /dropzones, 
+    // Extract path and method
     const path = event.rawPath || event.path;
     const method = event.requestContext?.http?.method || event.httpMethod;
 
-    if (method === "POST" && path === "/donations") {
-      const body = JSON.parse(event.body);
+    console.log("Method:", method);
+    console.log("Path:", path);
+
+    // Safe body parsing
+    let body;
+    if (typeof event.body === "string") {
+      try {
+        body = JSON.parse(event.body);
+      } catch (err) {
+        console.error("Error parsing body:", err);
+        return {
+          statusCode: 400,
+          body: JSON.stringify({
+            message: "Invalid JSON in request body",
+          }),
+        };
+      }
+    } else {
+      body = event.body;
+    }
+
+    // Handle POST /donations
+    if (method === "POST" && path.endsWith("/donations")) {
+      console.log("Parsed body:", body);
 
       const {
         dropzoneId,
@@ -39,8 +61,9 @@ export const handler = async (event) => {
       };
     }
 
-    if (method === "POST" && path === "/dropzones") {
-      const body = JSON.parse(event.body);
+    // Handle POST /dropzones
+    if (method === "POST" && path.endsWith("/dropzones")) {
+      console.log("Parsed body:", body);
 
       const { name, description, neededItems } = body;
 
@@ -59,7 +82,8 @@ export const handler = async (event) => {
       };
     }
 
-    if (method === "GET" && path === "/dropzones") {
+    // Handle GET /dropzones
+    if (method === "GET" && path.endsWith("/dropzones")) {
       const dropzones = await getAllDropZones();
 
       return {
@@ -70,6 +94,7 @@ export const handler = async (event) => {
       };
     }
 
+    // Catch-all for unmatched routes
     return {
       statusCode: 404,
       body: JSON.stringify({
@@ -77,7 +102,7 @@ export const handler = async (event) => {
       }),
     };
   } catch (err) {
-    console.error(err);
+    console.error("Unhandled error:", err);
     return {
       statusCode: 500,
       body: JSON.stringify({
