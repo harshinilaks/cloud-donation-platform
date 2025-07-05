@@ -1,6 +1,6 @@
 import { PutCommand } from "@aws-sdk/lib-dynamodb";
 import { v4 as uuidv4 } from "uuid";
-import { uploadDonationFile } from "./s3upload.js";
+import { uploadDonationFile, getDownloadUrl } from "./s3upload.js";
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 
@@ -45,26 +45,12 @@ export async function createDonation({
   await ddb.send(cmd);
 
   console.log("Donation created:", item);
-  return item;
-}
 
-if (process.argv[2] === "test") {
-    (async () => {
-      const dropzoneId = "dz-test";
-      const donorName = "Harshini";
-      const donorNote = "Brand new sleeping bags!";
-      const fileName = "sleepingbags.txt";
-      const fileContent = Buffer.from("These are high quality sleeping bags!");
-  
-      const donation = await createDonation({
-        dropzoneId,
-        donorName,
-        donorNote,
-        fileName,
-        fileContent,
-      });
-  
-      console.log(" Test donation created:", donation);
-    })();
-  }
-  
+  // now we are making it so that we are actually returning the presigned URL!!
+  const downloadUrl = await getDownloadUrl(uploadedFileKey);
+
+  return {
+    ...item,
+    downloadUrl,
+  };
+}
