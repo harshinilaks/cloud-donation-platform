@@ -1,18 +1,23 @@
-import { createDonation } from "./createDonation.js";
+import { createDonation, getDonationsForDropzone } from "./createDonation.js";
 import { createDropZone, getAllDropZones } from "./createDropZone.js";
+import { getDownloadUrl } from "./s3upload.js";
 
 export const handler = async (event) => {
   console.log("Incoming event:", JSON.stringify(event, null, 2));
 
   try {
-    // Extract path and method
-    const path = event.rawPath || event.path;
+    let path = event.rawPath || event.path;
     const method = event.requestContext?.http?.method || event.httpMethod;
 
+    console.log("RAW PATH:", path);
     console.log("Method:", method);
-    console.log("Path:", path);
 
-    // Safe body parsing
+    if (path.startsWith("/dev")) {
+      path = path.replace("/dev", "");
+    }
+
+    console.log("STRIPPED PATH:", path);
+
     let body;
     if (typeof event.body === "string") {
       try {
@@ -30,7 +35,7 @@ export const handler = async (event) => {
       body = event.body;
     }
 
-    // Handle POST /donations
+    // POST /donations
     if (method === "POST" && path.endsWith("/donations")) {
       console.log("Parsed body:", body);
 
@@ -52,6 +57,9 @@ export const handler = async (event) => {
         fileContent,
       });
 
+      const downloadUrl = await getDownloadUrl(donation.uploadedFileKey);
+      donation.downloadUrl = downloadUrl;
+
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -61,7 +69,7 @@ export const handler = async (event) => {
       };
     }
 
-    // Handle POST /dropzones
+    // POST /dropzones
     if (method === "POST" && path.endsWith("/dropzones")) {
       console.log("Parsed body:", body);
 
@@ -82,14 +90,38 @@ export const handler = async (event) => {
       };
     }
 
-    // Handle GET /dropzones
-    if (method === "GET" && path.endsWith("/dropzones")) {
+    // GET /dropzones
+    if (method === "GET" && path === "/dropzones") {
       const dropzones = await getAllDropZones();
 
       return {
         statusCode: 200,
         body: JSON.stringify({
           dropzones,
+        }),
+      };
+    }
+
+    // GET /dropzones/{dropzoneId}/donations
+    if (
+      method === "GET" &&
+      path.match(/^\/dropzones\/[^/]+\/donations$/)
+    ) {
+      const segments = path.split("/");
+      const dropzoneId = segments[2];
+      console.log("Fetching donations for dropzoneId:", dropzoneId);
+
+      const donations = await getDonationsForDropzone(dropzoneId);
+
+      // Generate download URLs for each donation
+      for (const donation of donations) {
+        donation.downloadUrl = await getDownloadUrl(donation.uploadedFileKey);
+      }
+
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          donations,
         }),
       };
     }

@@ -54,3 +54,20 @@ export async function createDonation({
     downloadUrl,
   };
 }
+
+import { ScanCommand } from "@aws-sdk/lib-dynamodb";
+
+export async function getDonationsForDropzone(dropzoneId) {
+  const cmd = new ScanCommand({
+    TableName: TABLE_NAME,
+    FilterExpression: "SK = :sk AND begins_with(PK, :prefix)",
+    ExpressionAttributeValues: {
+      ":sk": dropzoneId,
+      ":prefix": "DONATION#",
+    },
+  });
+
+  const result = await ddb.send(cmd);
+  return result.Items;
+}
+
