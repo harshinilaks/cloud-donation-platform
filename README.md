@@ -90,5 +90,4 @@ ReliefDrop makes it simple for neighbors to **create drop zones, list needed ite
 
 ## 🎥 Demo Video
 
-```html
-<iframe width="560" height="315" src="https://youtu.be/-YrhRiI0DS8" frameborder="0" allowfullscreen></iframe>
+[![Demo Video](https://img.youtube.com/vi/-YrhRiI0DS8/0.jpg)](https://youtu.be/-YrhRiI0DS8)
